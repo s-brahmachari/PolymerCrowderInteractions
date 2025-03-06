@@ -91,19 +91,15 @@ def load_traj(traj_file,dt=2):
     print('Trajectory shape:', xyz.shape)
     return xyz
 
-chivals = np.arange(-0.3,0.1,0.1)
-Ecut = [4.0]
-data = {}
-kavals = [0.0, 20.0, 50.0, 200.0]
-shutil.rmtree('./output')
-for ka in kavals:
-    for chi in chivals:
-        for ecut in Ecut:
-            meanvals, stdvals = [], []
-            for rep in range(1):
-                sim = initialize_simulation(name=f"{ka:.2f}-{chi:.2f}-{ecut:.2f}", N=1000, nblocks_collapse=1, blocksize_collapse=10000, chi=chi,ka=ka, Ecut=ecut)
-                mean, std = get_meanRG(sim,n_blocks=2, blocksize=500)
-                meanvals.append(mean)
-                
-            data[f'{ka:.2f}-{ecut:.2f}-{chi:.2f}']=(np.mean(meanvals), np.std(meanvals))
+
+ka = sys.argv[1]
+chi = sys.argv[2]
+ecut = sys.argv[3]
+meanvals=[]
+for rep in range(5):
+    sim = initialize_simulation(name=f"{ka:.2f}-{chi:.2f}-{ecut:.2f}", N=1000, nblocks_collapse=1, blocksize_collapse=10000, chi=chi,ka=ka, Ecut=ecut)
+    mean, std = get_meanRG(sim,n_blocks=2, blocksize=500)
+    meanvals.append(mean)
+    
+np.savetxt(os.path.join(sim.folder, f'RG-{ka:.2f}-{ecut:.2f}-{chi:.2f}.txt'),[np.mean(meanvals), np.std(meanvals)])
             
