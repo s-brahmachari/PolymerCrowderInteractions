@@ -39,14 +39,14 @@ def initialize_simulation(name='sim', N=1000, platform='None', collapse=True, nb
 
     #add potentials
     # sim.addFENEBonds(kfb=30.0)
-    sim.addHarmonicBonds(kfb=100.0,r0=1.0)
+    sim.addHarmonicBonds(kfb=50.0,r0=1.0)
     # sim.addAngles(ka=ka)
     sim.addHarmonicRestraintAngles(k_angle=ka, )
     # sim.addNextNearestNeighborHarmonicBonds(kfb=ka, r0=2.5)
     sim.addSelfAvoidance(Ecut=Ecut, k_rep=5.0, r0=0.5)
     
     gen_types_table(chi)
-    sim.addCustomTypes(mu=5.0, rc = 1.5, TypesTable='input/types_table.csv')
+    sim.addCustomTypes(mu=5.0, rc = 1.5, TypesTable=f'input/types_table_{chi}.csv')
     
     # sim.addFlatBottomHarmonic(kr=0.1, n_rad=30)
     # sim.addCylindricalConfinement(r_conf=args.rconf, z_conf=args.zconf, kr=5.0)
@@ -60,7 +60,7 @@ def initialize_simulation(name='sim', N=1000, platform='None', collapse=True, nb
     return sim
 
 def gen_types_table(chi):
-    with open(f'./input/types_table.csv', 'w') as f:
+    with open(f'./input/types_table_{chi}.csv', 'w') as f:
         f.write(f'A,B\n')
         f.write(f'{chi},{chi}\n')
         f.write(f'{chi},{chi}')
@@ -95,10 +95,14 @@ def load_traj(traj_file,dt=2):
 ka = sys.argv[1]
 chi = sys.argv[2]
 ecut = sys.argv[3]
+output = sys.argv[4]
+
 meanvals=[]
-for rep in range(5):
-    sim = initialize_simulation(name=f"{ka:.2f}-{chi:.2f}-{ecut:.2f}", N=1000, nblocks_collapse=1, blocksize_collapse=10000, chi=chi,ka=ka, Ecut=ecut)
-    mean, std = get_meanRG(sim,n_blocks=2, blocksize=500)
+for rep in range(10):
+    sim = initialize_simulation(name="sim", N=1000, 
+                                nblocks_collapse=5, blocksize_collapse=10000, chi=chi,ka=ka, Ecut=ecut,
+                                save_folder=output)
+    mean, std = get_meanRG(sim,n_blocks=100, blocksize=500)
     meanvals.append(mean)
     
 np.savetxt(os.path.join(sim.folder, f'RG-{ka:.2f}-{ecut:.2f}-{chi:.2f}.txt'),[np.mean(meanvals), np.std(meanvals)])
