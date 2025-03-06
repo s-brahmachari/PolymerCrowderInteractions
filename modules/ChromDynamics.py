@@ -92,7 +92,7 @@ class MiChroM:
                                      -0.266760,-0.301320,-0.336630,-0.329350,-0.341230,-0.341230,-0.349490, #B3
                                      -0.266760,-0.301320,-0.336630,-0.329350,-0.341230,-0.341230,-0.349490, #B4
                                      -0.225646,-0.245080,-0.209919,-0.282536,-0.349490,-0.349490,-0.255994] #NA
-            self.printHeader()
+            # self.printHeader()
             
 
     def setup(self, platform="CUDA", PBC=False, PBCbox=None, GPU="default",
@@ -525,8 +525,55 @@ class MiChroM:
 
         self.metadata["AngleForce"] = repr({"stiffness": ka})
         self.forceDict["AngleForce"] = angles
+            
+    def addHarmonicRestraintAngles(self, k_angle=2.0, theta_rad=3.1412):
+        R"""
+        Adds a harmonic angle potential between bonds connecting beads *i-1, i, i+1*.
+        The potential is defined as:
         
+            U(θ) = 0.5 * k_angle * (θ - θ₀)²
         
+        where:
+        - θ is the angle between bonds (in radians),
+        - θ₀ (theta_rad) is the equilibrium angle,
+        - k_angle is the angular stiffness.
+        
+        This function loops over all chains defined in ``self.chains``. For each chain,
+        it assigns the harmonic restraint angle to every triplet of consecutive beads.
+        
+        Args:
+            k_angle (float, required):
+                Angle potential stiffness coefficient. (Default value = 2.0)
+            theta_rad (float, required):
+                Equilibrium angle in radians. (Default value = 3.1412)
+        """
+        
+        # If k_angle is a scalar, create an array with the same value for every bead.
+        try:
+            k_angle[0]
+        except:
+            k_angle = np.zeros(self.N, float) + k_angle
+        
+        # Create the CustomAngleForce with the harmonic potential energy expression.
+        angles = self.mm.CustomAngleForce("0.5 * k_angle * (theta - theta_0)^2")
+        angles.addGlobalParameter("theta_0", theta_rad)
+        angles.addPerAngleParameter("k_angle")
+        
+        # Loop over all chains and add the angles.
+        for start, end, isRing in self.chains:
+            # For a linear chain, add angles between consecutive beads.
+            for j in range(start + 1, end):
+                angles.addAngle(j - 1, j, j + 1, [k_angle[j]])
+            
+            # For ring chains, add angles at the boundaries to close the ring.
+            if isRing:
+                angles.addAngle(end - 1, end, start, [k_angle[end]])
+                angles.addAngle(end, start, start + 1, [k_angle[start]])
+        
+        # Update metadata and store the force.
+        self.metadata["HarmonicRestraintAngleForce"] = repr({"stiffness": k_angle})
+        self.forceDict["HarmonicRestraintAngleForce"] = angles
+    
     def addRepulsiveSoftCore(self, Ecut=4.0,CutoffDistance=3.0):
         
         R"""
@@ -985,6 +1032,40 @@ class MiChroM:
         self.forceDict["HarmonicBond"].addBond(int(i), int(j), [])
         self.bondsForException.append((int(i), int(j)))
 
+    def addNextNearestNeighborHarmonicBonds(self, kfb=30.0, r0=2.0):
+        """
+        Adds harmonic bonds between next nearest neighbors (i and i+2) for each chain.
+        
+        For a non-ring chain, the function adds bonds between beads i and i+2, where
+        i goes from the start index to (end-1). For a ring (circular) chain, the bond is
+        added in a cyclic manner using modulo arithmetic to wrap around.
+        
+        Args:
+            kfb (float, required): Bond stiffness.
+            r0 (float, required): Equilibrium distance for the bond.
+        """
+        for start, end, isRing in self.chains:
+            # Determine the number of beads in the chain.
+            chain_length = end - start + 1
+            # Skip chains with fewer than three beads.
+            if chain_length < 3:
+                continue
+
+            if not isRing:
+                # For a linear chain, add bonds for beads i to i+2.
+                # The last possible i is (end - 1) because i+2 must be <= end.
+                for i in range(start, end - 1):
+                    self.addHarmonicBond_ij(i, i + 2, kfb=kfb, r0=r0)
+            else:
+                # For a ring chain, loop through every bead and connect it to the bead two positions ahead,
+                # using modulo to wrap around.
+                for i in range(chain_length):
+                    a = start + i
+                    b = start + ((i + 2) % chain_length)
+                    self.addHarmonicBond_ij(a, b, kfb=kfb, r0=r0)
+        
+        # Optionally, update metadata for record keeping.
+        self.metadata["NextNearestHarmonicBond"] = repr({"kfb": kfb, "r0": r0})
 
     def addSelfAvoidance(self, Ecut=4.0, k_rep=20.0, r0=1.0):
         R"""
@@ -2067,7 +2148,8 @@ class MiChroM:
                 if eK > 5.0:
                     print("(i)", end=' ')
                     self.initVelocities()
-            print("pos[1]=[%.1lf %.1lf %.1lf]" % tuple(newcoords[0]), end=' ')
+            if attempt>0:
+                print(attempt, "pos[1]=[%.1lf %.1lf %.1lf]" % tuple(newcoords[0]), end=' ')
 
 
             if ((np.isnan(newcoords).any()) or (eK > self.eKcritical) or
