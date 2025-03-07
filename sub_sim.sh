@@ -4,7 +4,7 @@ counter=0
 counter2=0
 out_str=""
 code_home=/home/sb95/PolymerCrowderInteractions
-data_home=/work/cms16/sb95/Polymer_collapse_RW_init
+data_home=/work/cms16/sb95/Polymer_collapse_RW_init_rcut_0.8_long
 
 mkdir -p -v $data_home
 

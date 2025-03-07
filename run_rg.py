@@ -43,7 +43,7 @@ def initialize_simulation(name='sim', N=1000, platform='None', collapse=True, nb
     # sim.addAngles(ka=ka)
     sim.addHarmonicRestraintAngles(k_angle=ka, )
     # sim.addNextNearestNeighborHarmonicBonds(kfb=ka, r0=2.5)
-    sim.addSelfAvoidance(Ecut=Ecut, k_rep=5.0, r0=0.5)
+    sim.addSelfAvoidance(Ecut=Ecut, k_rep=5.0, r0=0.8)
     
     gen_types_table(chi)
     sim.addCustomTypes(mu=5.0, rc = 1.5, TypesTable=f'input/types_table_{chi}.csv')
@@ -102,10 +102,13 @@ output = sys.argv[5]
 meanvals=[]
 for rep in range(10):
     sim = initialize_simulation(name=f"sim-{rep+1}", N=N_poly, 
-                                nblocks_collapse=5, blocksize_collapse=20000, chi=chi,ka=ka, Ecut=ecut,
+                                nblocks_collapse=20, blocksize_collapse=100000, chi=chi,ka=ka, Ecut=ecut,
                                 save_folder=output)
-    mean, std = get_meanRG(sim,n_blocks=100, blocksize=1000)
+    mean, std = get_meanRG(sim,n_blocks=200, blocksize=1000)
     meanvals.append(mean)
     
+    np.savetxt(os.path.join(sim.folder, f'RG_{N_poly:.0f}_{ka:.2f}_{ecut:.2f}_{chi:.2f}_{rep}.txt'),meanvals)
+
 np.savetxt(os.path.join(sim.folder, f'RG_{N_poly:.0f}_{ka:.2f}_{ecut:.2f}_{chi:.2f}.txt'),meanvals)
+
             
