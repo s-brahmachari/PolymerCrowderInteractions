@@ -34,7 +34,7 @@ def initialize_simulation(name='sim', N=1000, platform='None', collapse=True, nb
     sim.saveFolder(save_folder)
     gen_seq(N)
     # mychro = sim.createRandomWalk(ChromSeq=os.path.join(args.home,f"input/exp_seq_{args.rep_frac}.txt"))#, isRing=True)
-    init_struct = sim.createRandomGas(ChromSeq='input/seq.txt')#, isRing=True)
+    init_struct = sim.createRandomWalk(ChromSeq='input/seq.txt')#, isRing=True)
     sim.loadStructure(init_struct, center=True)
 
     #add potentials
@@ -80,9 +80,10 @@ def get_meanRG(sim, n_blocks=5000, blocksize=1000):
         sim.runSimBlock(blocksize, increment=True) 
         sim.saveStructure()
         Rg.append(sim.chromRG())
+    sim.storage[0].close()
     return (np.mean(Rg), np.std(Rg))
         
-    # sim.storage[0].close()
+    
     
 def load_traj(traj_file,dt=2):
     print('Loading trajectory ...')
@@ -92,18 +93,19 @@ def load_traj(traj_file,dt=2):
     return xyz
 
 
-ka = sys.argv[1]
-chi = sys.argv[2]
-ecut = sys.argv[3]
-output = sys.argv[4]
+ka = float(sys.argv[1])
+chi = float(sys.argv[2])
+ecut = float(sys.argv[3])
+N_poly=int(sys.argv[4])
+output = sys.argv[5]
 
 meanvals=[]
 for rep in range(10):
-    sim = initialize_simulation(name="sim", N=1000, 
-                                nblocks_collapse=5, blocksize_collapse=10000, chi=chi,ka=ka, Ecut=ecut,
+    sim = initialize_simulation(name=f"sim-{rep+1}", N=N_poly, 
+                                nblocks_collapse=5, blocksize_collapse=20000, chi=chi,ka=ka, Ecut=ecut,
                                 save_folder=output)
-    mean, std = get_meanRG(sim,n_blocks=100, blocksize=500)
+    mean, std = get_meanRG(sim,n_blocks=100, blocksize=1000)
     meanvals.append(mean)
     
-np.savetxt(os.path.join(sim.folder, f'RG-{ka:.2f}-{ecut:.2f}-{chi:.2f}.txt'),[np.mean(meanvals), np.std(meanvals)])
+np.savetxt(os.path.join(sim.folder, f'RG_{N_poly:.0f}_{ka:.2f}_{ecut:.2f}_{chi:.2f}.txt'),meanvals)
             

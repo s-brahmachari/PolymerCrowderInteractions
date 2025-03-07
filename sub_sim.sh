@@ -4,24 +4,25 @@ counter=0
 counter2=0
 out_str=""
 code_home=/home/sb95/PolymerCrowderInteractions
-data_home=/work/cms16/sb95/Polymer_collapse
+data_home=/work/cms16/sb95/Polymer_collapse_RW_init
 
 mkdir -p -v $data_home
 
 cp -r $code_home/modules $data_home
-cp $code_home/run_rg.py $code_home/submit_simulation_6H.slurm $data_home
+cp $code_home/run_rg.py $data_home
 cd $data_home
 mkdir input
-for ka in 0.0 5.0 10.0 20.0 50.0 100.0 200.0; do
-for chi in 0.0 -0.05 -0.1 -0.15 -0.2 -0.25 -0.3 -0.35 -0.4; do
+for N in 100 200 500 800 1000 2000 5000; do
+for ka in 0.0 5.0 20.0 100.0 200.0; do
+for chi in 0.0 -0.05 -0.1 -0.2 -0.4 -0.6; do
 for ecut in 0.0 4.0 8.0; do
-savefolder=output_ka${ka}_chi${chi}_ecut${ecut}
+savefolder=output_N${N}_ka${ka}_chi${chi}_ecut${ecut}
 mkdir -p -v $savefolder
 
 if [[ -z "$out_str" ]]; then
-    out_str=$"python run_rg.py ${ka} ${chi} ${ecut} ${savefolder} > ${savefolder}/output.log"
+    out_str=$"python run_rg.py ${ka} ${chi} ${ecut} ${N} ${savefolder} > ${savefolder}/output.log"
 else
-    out_str+=$'\n'"python run_rg.py ${ka} ${chi} ${ecut} ${savefolder} > ${savefolder}/output.log"
+    out_str+=$'\n'"python run_rg.py ${ka} ${chi} ${ecut} ${N} ${savefolder} > ${savefolder}/output.log"
 fi
 # out_str+=$'\n'"python run_rg.py ${ka} ${chi} ${ecut} ${savefolder} > ${savefolder}/output.log"
 
@@ -32,7 +33,7 @@ if (( counter == 16 )); then
 # echo "$out_str"
 sbatch_file="#!/bin/bash -l
 
-#SBATCH --job-name=polycol
+#SBATCH --job-name=$N
 #SBATCH --account=commons
 #SBATCH --partition=commons
 #SBATCH --nodes=1            # this can be more, up to 22 on aries
@@ -72,13 +73,14 @@ fi
 done
 done
 done
+done
 
 # Print remaining commands if any
 if [[ -n "$out_str" ]]; then
 echo "$out_str"
 sbatch_file="#!/bin/bash -l
 
-#SBATCH --job-name=polycol
+#SBATCH --job-name=$N
 #SBATCH --account=commons
 #SBATCH --partition=commons
 #SBATCH --nodes=1            # this can be more, up to 22 on aries

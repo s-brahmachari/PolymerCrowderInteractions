@@ -1711,38 +1711,46 @@ class MiChroM:
     
     def createRandomWalk(self, ChromSeq=None):    
         R"""
-        Creates a chromosome polymer chain with beads position based on a random walk.
-        
-        Args:
+        Creates a chromosome polymer chain with beads positions based on a random walk.
 
-        ChromSeq (file, required):
-            Chromatin sequence of types file. The first column should contain the locus index. The second column should have the locus type annotation. A template of the chromatin sequence of types file can be found at the `Nucleome Data Bank (NDB) <https://ndb.rice.edu/static/text/chr10_beads.txt>`__.
+        Args:
+            ChromSeq (file, required):
+                Chromatin sequence file. The first column should contain the locus index,
+                and the second column should have the locus type annotation.
+                A template of the chromatin sequence file can be found at the 
+                `Nucleome Data Bank (NDB) <https://ndb.rice.edu/static/text/chr10_beads.txt>`__.
+        
         Returns:
             :math:`(N, 3)` :class:`numpy.ndarray`:
-                Returns an array of positions.
-   
+                Array of bead positions.
         """
         
+        # Translate the chromatin sequence into bead types
         self._translate_type(ChromSeq)
         Nbeads = len(self.type_list_letter)
 
-        segment_length = 1
         step_size = 1
         offset = 10.0
-        theta = np.repeat(np.random.uniform(0., 1., Nbeads // segment_length + 1), segment_length)
-        theta = 2.0 * np.pi * theta[:Nbeads]
-        u = np.repeat(np.random.uniform(0., 1., Nbeads // segment_length + 1), segment_length)
-        u = 2.0 * u[:Nbeads] - 1.0
+
+        # Generate random angles and directions for a random walk
+        theta = 2.0 * np.pi * np.random.uniform(0., 1., size=Nbeads)
+        u = 2.0 * np.random.uniform(0., 1., size=Nbeads) - 1.0
+
+        # Calculate displacements for each step
         x = step_size * np.sqrt(1. - u * u) * np.cos(theta)
         y = step_size * np.sqrt(1. - u * u) * np.sin(theta)
         z = step_size * u
+
+        # Cumulative sum to generate the random walk
         x, y, z = np.cumsum(x), np.cumsum(y), np.cumsum(z)
 
-        chain = []
-        chain.append((0,Nbeads-1,0))
+        # Define chain as a single continuous chain
+        chain = [(0, Nbeads - 1, 0)]
         self.setChains(chain)
 
-        return np.vstack([x, y, z]).T - offset * np.random.uniform(-1,1)
+        # Generate a 3D random offset vector (if desired)
+        offset_vector = offset * np.random.uniform(-1, 1, size=3)
+        return np.vstack([x, y, z]).T - offset_vector
 
     def createRandomGas(self, ChromSeq=None, Rc=50.0, isRing=False):    
         R"""
